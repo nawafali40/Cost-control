@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<title>نظام تكاليف وجرد المخزون</title>
+<style>
+body{
+  font-family:Arial,Helvetica,sans-serif;
+  margin:0;
+  direction:rtl;
+  background:#020617;
+  color:#e5e7eb;
+}
+.navbar{
+  background:#020617;
+  color:#f9fafb;
+  padding:10px 16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid #1f2937;
+  position:sticky;
+  top:0;
+  z-index:10;
+  overflow-x: auto;
+}
+.nav-title{
+  font-size:16px;
+  font-weight:bold;
+  flex-shrink: 0;
+}
+.nav-buttons{
+  display: flex;
+  flex-shrink: 0;
+}
+.nav-buttons button{
+  margin-inline:4px;
+  padding:6px 12px;
+  border-radius:999px;
+  border:none;
+  cursor:pointer;
+  font-size:12px;
+  transition:background .15s,transform .1s;
+  flex-shrink: 0;
+}
+.nav-buttons button.active{
+  background:#f97316;
+  color:#111827;
+}
+.nav-buttons button.inactive{
+  background:#111827;
+  color:#e5e7eb;
+}
+.nav-buttons button:hover{
+  transform:translateY(-1px);
+}
+.page{
+  max-width:1100px;
+  margin:16px auto 24px;
+  background:#020617;
+  padding:20px;
+  border-radius:16px;
+  box-shadow:0 18px 45px rgba(0,0,0,.45);
+  border:1px solid #1e293b;
+  display:none;
+}
+.page.active{
+  display:block;
+}
+h2{
+  margin-top:0;
+  font-size:18px;
+  color:#f9fafb;
+}
+h3{
+    font-size: 15px;
+    margin-top: 18px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  font-size:13px;
+}
+td,th{
+  border:1px solid #1f2937;
+  padding:6px;
+  text-align:center;
+}
+th{
+  background:#020617;
+  color:#f97316;
+  font-weight:600;
+}
+input,select,button.action{
+  padding:6px 8px;
+  border-radius:8px;
+  border:1px solid #374151;
+  font-size:13px;
+  box-sizing:border-box;
+  background:#020617;
+  color:#e5e7eb;
+}
+input::placeholder{
+  color:#6b7280;
+}
+input,select{
+  width:100%;
+}
+button.action{
+  cursor:pointer;
+  background:#f97316;
+  color:#111827;
+  border:none;
+  font-weight:600;
+}
+button.action:hover{
+  background:#ea580c;
+}
+button.secondary{
+  background:#111827;
+  color:#e5e7eb;
+  border:1px solid #374151;
+  cursor:pointer;
+}
+button.secondary:hover{
+  background:#1f2937;
+}
+.small{
+  font-size:11px;
+  color:#9ca3af;
+}
+.unit-label{
+  font-size:11px;
+  color:#9ca3af;
+  margin-right:4px;
+}
+.btn-row{
+  margin-top:10px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.summary-table{
+  margin-top:10px;
+}
+/* تنسيق الأخطاء */
+.bad{
+  background:#450a0a !important;
+  color:#fecaca;
+  border-color:#fca5a5 !important;
+}
+.bad .prod-total-line, .bad .mix-total-line{
+    color: #fca5a5;
+}
+.error-text{
+  font-size:11px;
+  color:#fecaca;
+  text-align:right;
+}
+.product-block, .mix-block{
+  border:1px solid #1f2937;
+  border-radius:14px;
+  padding:10px 10px 12px;
+  margin-top:12px;
+  background:#020617;
+  transition:border-color 0.3s;
+}
+.prod-header, .mix-header{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+.prod-header-left, .mix-header-left{
+  flex:1 1 auto;
+  display:flex;
+  gap:6px;
+  align-items:center;
+}
+.prod-header-left input, .mix-header-left input{
+  flex:1 1 auto;
+}
+.prod-total-line, .mix-total-line{
+  margin-top:6px;
+  font-size:12px;
+  font-weight:bold;
+  text-align:left;
+  color:#f97316;
+}
+hr.divider{
+  border:none;
+  border-top:1px dashed #334155;
+  margin:8px 0 12px;
+}
+.bad input,
+.bad select{
+  border-color:#fca5a5;
+}
+.variance-td-over {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+.variance-td-short {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+</style>
+</head>
+<body>
+<div class="navbar">
+<div class="nav-title">نظام تكاليف وجرد</div>
+<div class="nav-buttons">
+<button class="active" id="btnDef" onclick="showPage('def')">📦 تعريف المواد الأساسية</button>
+<button class="inactive" id="btnMix" onclick="showPage('mix')">🧪 الخلطات</button>
+<button class="inactive" id="btnProd" onclick="showPage('prod')">☕ المنتجات / الوصفات</button>
+<button class="inactive" id="btnPurchases" onclick="showPage('purchases')">📝 المشتريات</button>
+<button class="inactive" id="btnWaste" onclick="showPage('waste')">🗑️ الهدر والفاقد</button>
+<button class="inactive" id="btnSales" onclick="showPage('sales')">📊 المبيعات</button>
+<button class="inactive" id="btnInvLevels" onclick="showPage('invlevels')">📈 مستويات المخزون</button>
+<button class="inactive" id="btnVariance" onclick="showPage('variance')">⚖️ الجرد والمقارنة</button>
+</div>
+</div>
+
+<div class="page active" id="pageDef">
+    <h2>📦 صفحة تعريف المواد الأساسية</h2>
+    <p class="small">
+        أدخل اسم المادة، وحدة الشراء، الكمية الكلية، والسعر الإجمالي **لتعريف المادة وحساب سعر الوحدة الأساسية**.
+        <br/>🚫 لا يسمح بتكرار نفس اسم المادة. هذا السعر هو ما يُعتمد عليه في حسابات التكاليف.
+    </p>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input id="defName" placeholder="اسم المادة (مثال: حليب كامل الدسم)" style="flex: 1 1 200px;"/>
+        <select id="defUnit" style="flex: 1 1 100px;">
+            <option value="kg">كيلو (Kg)</option>
+            <option value="g">جرام (g)</option>
+            <option value="l">لتر (L)</option>
+            <option value="ml">مل (ml)</option>
+            <option value="pc">حبة (Pc)</option>
+        </select>
+        <input id="defQty" placeholder="الكمية المشتراة (مثال: 10)" type="number" style="flex: 1 1 100px;"/>
+        <input id="defPrice" placeholder="السعر الإجمالي (مثال: 950)" type="number" style="flex: 1 1 100px;"/>
+    </div>
+    <div class="btn-row">
+        <button class="action" onclick="addIngredientDef()">إضافة / تحديث تعريف المادة</button>
+    </div>
+    <h3 style="margin-top: 15px;">قائمة مواد المخزون المعرفة حالياً</h3>
+    <table id="defTbl">
+        <tr><th>المادة</th><th>الوحدة الأساسية</th><th>سعر الوحدة الأساسية الحالي</th><th>حذف</th></tr>
+    </table>
+</div>
+
+<div class="page" id="pageMix">
+    <h2>🧪 صفحة الخلطات</h2>
+    <p class="small">
+        الخلطة هي مجموعة مواد من المخزون تُستخدم لاحقاً في المنتجات النهائية بكميات جزئية.
+        <br/>
+        **ملاحظة:** يتم حساب تكلفة الخلطة بناءً على **سعر الوحدة الأساسية الحالي** في صفحة التعريف/المشتريات.
+    </p>
+    <div class="btn-row">
+        <button class="secondary" onclick="addMixBlock()">+ إضافة خلطة جديدة</button>
+    </div>
+    <div id="mixesContainer"></div>
+
+    <h3 style="margin-top:18px;font-size:15px;">⚖️ تعريف وزن كل خلطة</h3>
+    <table class="summary-table" id="mixSummary">
+        <tr>
+            <th>اسم الخلطة</th>
+            <th>إجمالي تكلفة الخلطة (ريال)</th>
+            <th>إجمالي الوزن</th>
+            <th>الوحدة</th>
+            <th>تكلفة الوحدة (ريال / مل أو جرام)</th>
+        </tr>
+    </table>
+</div>
+
+<div class="page" id="pageProd">
+    <h2>☕ صفحة المنتجات / الوصفات</h2>
+    <p class="small">
+        ✅ لكل منتج، أدخل مكوناته وتكلفة صنعه، بالإضافة إلى **سعر البيع للعميل**.
+    </p>
+    <div class="btn-row">
+        <button class="secondary" onclick="addProductBlock()">+ إضافة منتج جديد</button>
+        <button class="secondary" onclick="exportData()">💾 حفظ البيانات كملف</button>
+        <button class="secondary" onclick="document.getElementById('fileInput').click()">📂 استعادة من ملف</button>
+        <button class="secondary" onclick="exportPDF()">🖨️ تقرير تفصيلي لمنتج (PDF)</button>
+        <button class="secondary" onclick="exportComprehensivePDF()">📄 تقرير شامل للملخصات (PDF)</button>
+    </div>
+    <div id="productsContainer"></div>
+    <h3 style="margin-top:18px;">📊 ملخص تكلفة وربحية كل منتج</h3>
+    <table class="summary-table" id="productSummary">
+        <tr><th>اسم المنتج</th><th>سعر البيع</th><th>إجمالي التكلفة (ريال)</th><th>الربح (ريال)</th><th>نسبة الربح (%)</th></tr>
+    </table>
+    <h3 style="margin-top:18px;">إجمالي تكلفة كل المنتجات الصالحة: <span id="total">0.00</span> ريال</h3>
+    <input accept=".json" id="fileInput" style="display:none" type="file">
+</div>
+
+<div class="page" id="pagePurchases">
+    <h2>📝 صفحة المشتريات والفواتير</h2>
+    <p class="small">
+        قم بتسجيل تفاصيل فواتير المشتريات. يتم تحديث سعر الوحدة الأساسية للمادة في النظام بناءً على آخر سعر شراء.
+        <br/>
+        **ملاحظة:** سيتم إضافة هذه الكميات إلى مستويات المخزون عند الحساب.
+    </p>
+
+    <div class="btn-row">
+        <button class="secondary" onclick="addPurchaseBlock()">+ إضافة فاتورة مشتريات جديدة</button>
+    </div>
+    <div id="purchasesContainer"></div>
+
+    <h3 style="margin-top:18px;">إجمالي المشتريات المسجلة: <span id="purchasesTotal">0.00</span> ريال</h3>
+</div>
+
+<div class="page" id="pageWaste">
+    <h2>🗑️ صفحة الهدر والفاقد المسجل</h2>
+    <p class="small">
+        سجل الكميات التي تم إهدارها (خربت، طاحت، إلخ). سيتم خصمها من مستويات المخزون.
+        <br/>
+        **الهدر من المنتجات:** عند إدخال منتج ضائع، سيتم تحويله تلقائياً إلى استهلاك من مواده الخام.
+    </p>
+    <div class="card">
+        <div class="btn-row">
+            <button class="secondary" onclick="addWasteRow()">+ إضافة سطر هدر</button>
+            <button class="action" onclick="calcWaste()">حساب الهدر والخصم</button>
+        </div>
+        <table id="wasteTbl">
+            <tr>
+                <th>النوع</th>
+                <th>الاسم (مادة أو منتج)</th>
+                <th>الكمية</th>
+                <th>التكلفة التقريبية</th>
+                <th>حذف</th>
+            </tr>
+        </table>
+    </div>
+    <div class="card">
+        <h3>ملخص الهدر الإجمالي (بالوحدة الأساسية والتكلفة)</h3>
+        <table id="wasteSummary">
+            <tr>
+                <th>اسم المادة</th>
+                <th>الكمية المهدرة (وحدة أساسية)</th>
+                <th>التكلفة الإجمالية (ريال)</th>
+            </tr>
+        </table>
+        <h3 style="color:#f97316;">إجمالي تكلفة الهدر المسجل: <span id="totalWasteCost">0.00</span> ريال</h3>
+    </div>
+</div>
+
+<div class="page" id="pageSales">
+    <h2>📊 صفحة المبيعات واستهلاك المواد</h2>
+    <p class="small">
+        ✅ أدخل اسم المنتج وعدد الطلبات المبيعة لهذا الشهر.
+        <br/>
+        **هذه البيانات ضرورية لتقرير الجرد والمقارنة.**
+    </p>
+    <div class="card">
+        <div class="btn-row">
+            <button class="secondary" onclick="addSalesRow()">+ إضافة سطر مبيعات</button>
+            <button class="secondary" onclick="clearSalesRows()">مسح كل السطور</button>
+            <button class="action" onclick="calcSales()">حساب المبيعات والاستهلاك النظري</button>
+        </div>
+        <table id="salesTbl">
+            <tr>
+                <th>اسم المنتج</th>
+                <th>عدد الطلبات / الأكواب</th>
+                <th>ملاحظة</th>
+                <th>حذف</th>
+            </tr>
+        </table>
+    </div>
+    <div class="card">
+        <h3 style="color:#f97316;">إجمالي إيرادات المبيعات (المطابقة): <span id="totalSalesRevenue">0.00</span> ريال</h3>
+        <h3>ملخص استهلاك المواد النظري من المبيعات (COGS)</h3>
+        <table id="salesSummary">
+            <tr>
+                <th>اسم المادة</th>
+                <th>الكمية المستهلكة (وحدة أساسية)</th>
+                <th>التكلفة الإجمالية (ريال)</th>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="page" id="pageInvLevels">
+    <h2>📈 مستويات المخزون والرصيد الحالي</h2>
+    <p class="small">
+        **رصيد أول المدة (BB):** سجل الكمية الأولية الموجودة في بداية الفترة.
+        <br/>
+        **الرصيد الحالي:** يتم حسابه تلقائياً بناءً على: (BB + المشتريات - المبيعات - الهدر).
+    </p>
+
+    <h3 style="margin-top: 15px;">إدخال رصيد أول المدة (BB)</h3>
+    <div class="btn-row">
+        <button class="secondary" onclick="addBBRow()">+ إضافة سطر BB</button>
+        <button class="action" onclick="calculateInventoryLevels()">حساب مستويات المخزون</button>
+    </div>
+    <table id="bbTbl">
+        <tr><th>اسم المادة (بحث)</th><th>BB الكمية (وحدة الشراء)</th><th>BB السعر الإجمالي</th><th>حذف</th></tr>
+    </table>
+
+    <h3 style="margin-top: 25px; color:#f97316;">جدول مستويات المخزون الحالي (في أي لحظة)</h3>
+    <table id="currentInvTbl">
+        <tr>
+            <th>المادة</th>
+            <th>الوحدة الأساسية</th>
+            <th>BB الكمية</th>
+            <th>مشتريات الكمية</th>
+            <th>استهلاك (مبيعات + هدر)</th>
+            <th>الرصيد الحالي (المتوفر نظرياً)</th>
+        </tr>
+    </table>
+</div>
+
+<div class="page" id="pageVariance">
+    <h2>⚖️ تقرير الجرد والمقارنة (شورت/أوفر)</h2>
+    <p class="small">
+        **الاستخدام النظري = استهلاك المبيعات + الهدر المسجل.**
+        <br/>
+        **الاستخدام الفعلي = (رصيد أول المدة + المشتريات) - رصيد آخر المدة.**
+        <br/>
+        **الهدر غير المسجل = الاستخدام الفعلي - الاستخدام النظري.** (كمية سالبة تعني شورت إضافي، موجبة تعني أوفر).
+    </p>
+    <h3 style="color:#f97316;">الخطوة الأولى: إدخال رصيد آخر المدة (EB)</h3>
+    <p class="small">أدخل كمية ونهاية الرصيد لكل مادة جردتها يدوياً.</p>
+    <div class="btn-row">
+        <button class="secondary" onclick="addEBRow()">+ إضافة سطر رصيد آخر المدة</button>
+    </div>
+    <table id="ebTbl">
+        <tr><th>اسم المادة (بحث)</th><th>EB الكمية (وحدة الشراء)</th><th>EB السعر الإجمالي</th><th>حذف</th></tr>
+    </table>
+
+    <div class="btn-row" style="margin-top: 20px;">
+        <button class="action" onclick="calculateVariance()">إجراء الجرد والمقارنة</button>
+    </div>
+
+    <h3 style="color:#f97316; margin-top: 25px;">نتائج الجرد والمقارنة (الهدر غير المسجل)</h3>
+    <p class="small">الكمية السالبة **(لون أحمر)** تعني **شورت غير مسجل**، والكمية الموجبة **(لون أخضر)** تعني **أوفر**.</p>
+    <table id="varianceTbl">
+        <tr>
+            <th>المادة</th>
+            <th>الاستخدام النظري</th>
+            <th>الاستخدام الفعلي</th>
+            <th>الهدر غير المسجل (الكمية)</th>
+            <th>تكلفة الهدر غير المسجل (ريال)</th>
+        </tr>
+    </table>
+</div>
+
+
+<datalist id="ingList"></datalist>
+<datalist id="mixList"></datalist>
+<datalist id="prodList"></datalist>
+<datalist id="ingProdList"></datalist>
+<datalist id="salesProdList"></datalist>
+<datalist id="bbIngList"></datalist>
+<datalist id="ebIngList"></datalist>
+<datalist id="purchaseIngList"></datalist>
+<script>
+let ing = [];   // تعريف المواد: {n, basePrice, baseUnit}
+let mixes = []; // الخلطات
+let purchases = []; // فواتير المشتريات
+let bbData = []; // رصيد أول المدة
+let ebData = []; // رصيد آخر المدة
+let wasteData = []; // الهدر المسجل
+let salesData = []; // المبيعات
+
+let salesUsage = {}; // الاستهلاك النظري من المبيعات
+let wasteUsage = {}; // الاستهلاك النظري من الهدر
+let productsData = {}; // لتخزين بيانات المنتجات (سعر بيع، تكلفة)
+
+/************ الدوال المساعدة ************/
+function convertToBaseUnit(qty, unit) {
+    if(unit === 'kg') return {qty: qty * 1000, unit: 'g'};
+    if(unit === 'l') return {qty: qty * 1000, unit: 'ml'};
+    if(unit === 'g') return {qty: qty, unit: 'g'};
+    if(unit === 'ml') return {qty: qty, unit: 'ml'};
+    return {qty: qty, unit: 'pc'};
+}
+function getMaterialUnit(name) {
+    const item = ing.find(i => i.n === name);
+    return item ? item.baseUnit : '';
+}
+function getMaterialPrice(name) {
+    const item = ing.find(i => i.n === name);
+    return item ? item.basePrice : 0;
+}
+function getProductInfo(name) {
+    return productsData[name];
+}
+function getMixCostPerUnit(name) {
+    const mix = mixes.find(m => m.name === name);
+    if (!mix || !mix.totalWeight || mix.totalWeight <= 0) return 0;
+    return mix.totalCost / mix.totalWeight;
+}
+
+/************ التنقل بين الصفحات ************/
+function showPage(which){
+    const pages = ['def', 'mix', 'prod', 'purchases', 'waste', 'sales', 'invlevels', 'variance'];
+    pages.forEach(p => {
+        const page = document.getElementById('page' + p.charAt(0).toUpperCase() + p.slice(1));
+        const btn = document.getElementById('btn' + p.charAt(0).toUpperCase() + p.slice(1));
+        if (page) page.classList.remove('active');
+        if (btn) { btn.classList.add('inactive'); btn.classList.remove('active'); }
+    });
+
+    const page = document.getElementById('page' + which.charAt(0).toUpperCase() + which.slice(1));
+    const btn = document.getElementById('btn' + which.charAt(0).toUpperCase() + which.slice(1));
+    if (page) page.classList.add('active');
+    if (btn) { btn.classList.add('active'); btn.classList.remove('inactive'); }
+
+    // إجراء تحديثات ضرورية عند التنقل
+    if (which === 'mix') recalcMixes();
+    if (which === 'prod') calcProducts();
+    if (which === 'purchases') recalcPurchases();
+    if (which === 'waste') calcWaste();
+    if (which === 'sales') calcSales();
+    if (which === 'invlevels') calculateInventoryLevels();
+    if (which === 'variance') calculateVariance();
+}
+
+/************ صفحة تعريف المواد الأساسية (Def) ************/
+function addIngredientDef(){
+    const n = document.getElementById('defName').value.trim();
+    const u = document.getElementById('defUnit').value;
+    const q = parseFloat(document.getElementById('defQty').value);
+    const p = parseFloat(document.getElementById('defPrice').value);
+
+    if(!n || !q || !p || q<=0 || p<=0){
+        alert('أدخل الاسم والكمية والسعر بشكل صحيح (يجب أن تكون الكمية والسعر أكبر من صفر).');
+        return;
+    }
+
+    const {qty: baseQty, unit: baseUnit} = convertToBaseUnit(q, u);
+    const basePrice = p / baseQty;
+
+    const existingIndex = ing.findIndex(i => i.n === n);
+    if(existingIndex !== -1){
+        if(!confirm(`المادة "${n}" موجودة. هل تريد تحديث سعر الوحدة الأساسية لها؟`)) return;
+        ing[existingIndex].basePrice = basePrice;
+        ing[existingIndex].baseUnit = baseUnit;
+    } else {
+        ing.push({n, basePrice, baseUnit});
+    }
+
+    renderDefTbl();
+    updateAllLookupsAndUnits();
+    recalcMixes(); // لإعادة حساب التكلفة بناءً على السعر الجديد
+    calcProducts(); // لإعادة حساب التكلفة بناءً على السعر الجديد
+    
+    document.getElementById('defName').value = document.getElementById('defQty').value = document.getElementById('defPrice').value = '';
+}
+
+function renderDefTbl(){
+    const tbl = document.getElementById('defTbl');
+    let header = '<tr><th>المادة</th><th>الوحدة الأساسية</th><th>سعر الوحدة الأساسية الحالي</th><th>حذف</th></tr>';
+    let rows = ing.map((i,idx) => {
+        let label = i.baseUnit;
+        if(label === 'g') label = 'جرام (g)';
+        else if(label === 'ml') label = 'مل (ml)';
+        else if(label === 'pc') label = 'حبة (Pc)';
+        
+        return `
+        <tr>
+            <td>${i.n}</td>
+            <td>${label}</td>
+            <td>${i.basePrice.toFixed(4)} ريال / ${i.baseUnit}</td>
+            <td><button class="secondary" onclick="deleteIngredientDef(${idx})">حذف</button></td>
+        </tr>`;
+    }).join('');
+    tbl.innerHTML = header + rows;
+}
+
+function deleteIngredientDef(index){
+    if(!confirm('حذف هذه المادة سيؤثر على كل النظام. هل أنت متأكد؟')) return;
+    const materialName = ing[index].n;
+    ing.splice(index,1);
+    
+    // تنظيف البيانات المتعلقة
+    bbData = bbData.filter(i => i.name !== materialName);
+    ebData = ebData.filter(i => i.name !== materialName);
+    wasteData = wasteData.filter(i => i.name !== materialName || i.type === 'product'); // إبقاء المنتجات
+    purchases.forEach(p => { p.items = p.items.filter(item => item.name !== materialName); });
+    purchases = purchases.filter(p => p.items.length > 0);
+    
+    renderDefTbl();
+    updateAllLookupsAndUnits();
+    recalcPurchases();
+    recalcMixes();
+    calcProducts();
+    calcWaste();
+    calcSales();
+}
+
+/************ قوائم البحث (datalist) ************/
+function updateLookups(){
+    const lists = ['ingList', 'mixList', 'prodList', 'ingProdList', 'salesProdList', 'bbIngList', 'ebIngList', 'purchaseIngList'];
+    lists.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.innerHTML = '';
+    });
+
+    ing.forEach(i=>{
+        const opt = document.createElement('option');
+        opt.value = i.n;
+        ['ingList', 'ingProdList', 'bbIngList', 'ebIngList', 'purchaseIngList'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.appendChild(opt.cloneNode(true));
+        });
+    });
+
+    mixes.forEach(m=>{
+        if(m.totalCost > 0){
+            const opt = document.createElement('option');
+            opt.value = m.name;
+            document.getElementById('mixList')?.appendChild(opt);
+        }
+    });
+
+    Object.keys(productsData).forEach(n=>{
+        const opt = document.createElement('option');
+        opt.value = n;
+        ['prodList', 'ingProdList', 'salesProdList'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.appendChild(opt.cloneNode(true));
+        });
+    });
+}
+function updateAllLookupsAndUnits(){
+    updateLookups();
+    // يجب تحديث الـ unit label في جميع الصفحات ذات الصلة
+    const prodBlocks = document.querySelectorAll('.product-block');
+    prodBlocks.forEach(block=>{
+        const rows = block.querySelectorAll('table tr');
+        rows.forEach((tr,idx)=>{
+            if(idx===0) return;
+            updateRowUnit(tr);
+        });
+    });
+}
+// ... (بقية دوال updateRowUnit, onTypeChangeRow, updateNameInputList, onNameInput لم يتم تعديلها جوهريًا)
+
+
+/************ دوال صفحة المشتريات (Purchases) ************/
+// ... (addPurchaseBlock, deletePurchaseBlock, addPurchaseItemRow, deletePurchaseItemRow)
+function recalcPurchases(){
+    const purchaseBlocks = document.querySelectorAll('#purchasesContainer .mix-block');
+    purchases = [];
+    let grandTotalPurchases = 0;
+
+    purchaseBlocks.forEach(block => {
+        const supplier = block.querySelector('.purchase-supplier').value.trim();
+        const date = block.querySelector('.purchase-date').value;
+        const totalCostSpan = block.querySelector('.purchase-total-cost');
+        const rows = block.querySelectorAll('table tr');
+
+        let invoiceTotal = 0;
+        let invoiceItems = [];
+        let invoiceHasError = false;
+
+        rows.forEach((tr, idx) => {
+            if(idx === 0) return;
+            const name = (tr.querySelector('.purchase-name-input').value || '').trim();
+            const unit = tr.querySelector('.purchase-unit-select').value;
+            const qty = parseFloat(tr.querySelector('.purchase-qty-input').value) || 0;
+            const price = parseFloat(tr.querySelector('.purchase-price-input').value) || 0;
+
+            if(name && qty > 0 && price > 0){
+                invoiceItems.push({name, unit, qty, price});
+                invoiceTotal += price;
+
+                // **تحديث سعر الوحدة الأساسية في المخزون (ing) بناءً على آخر شراء**
+                const {qty: baseQty, unit: baseUnit} = convertToBaseUnit(qty, unit);
+                const basePrice = price / baseQty;
+                const ingIndex = ing.findIndex(i => i.n === name);
+                if(ingIndex !== -1){
+                    ing[ingIndex].basePrice = basePrice;
+                } else {
+                    // إذا لم تكن المادة معرفة، يتم تعريفها الآن
+                    ing.push({n: name, basePrice, baseUnit});
+                }
+            } else if (name || qty > 0 || price > 0) {
+                invoiceHasError = true;
+            }
+        });
+
+        if(supplier && date && invoiceItems.length > 0 && !invoiceHasError){
+            purchases.push({supplier, date, items: invoiceItems, totalCost: invoiceTotal});
+            grandTotalPurchases += invoiceTotal;
+            totalCostSpan.textContent = invoiceTotal.toFixed(2);
+        } else {
+            totalCostSpan.textContent = 'خطأ/بيانات غير مكتملة';
+        }
+    });
+
+    document.getElementById('purchasesTotal').textContent = grandTotalPurchases.toFixed(2);
+
+    renderDefTbl(); // تحديث جدول التعريف ليعكس الأسعار الجديدة
+    updateAllLookupsAndUnits();
+    recalcMixes();
+    calcProducts();
+}
+
+/************ دوال صفحة الخلطات (Mixes) ************/
+// ... (دوال الخلطات تعتمد على getMaterialPrice)
+
+/************ دوال صفحة المنتجات (Products) ************/
+// ... (دوال المنتجات تعتمد على getMaterialPrice و getMixCostPerUnit)
+
+/************ دوال صفحة الهدر والفاقد (Waste) ************/
+function addWasteRow(wasteDataRow){
+    const tbl = document.getElementById('wasteTbl');
+    if(!tbl) return;
+    const tr = document.createElement('tr');
+    const typeVal = wasteDataRow ? wasteDataRow.type : 'material';
+    const nameVal = wasteDataRow ? wasteDataRow.name : '';
+    const qtyVal = wasteDataRow ? wasteDataRow.qty : '';
+
+    tr.innerHTML = `
+        <td>
+            <select class="waste-type-select" onchange="updateWasteList(this)">
+                <option value="material" ${typeVal === 'material' ? 'selected' : ''}>مادة خام</option>
+                <option value="product" ${typeVal === 'product' ? 'selected' : ''}>منتج نهائي</option>
+            </select>
+        </td>
+        <td>
+            <input class="waste-name-input" placeholder="اكتب اسم المادة/المنتج" list="${typeVal === 'material' ? 'ingList' : 'prodList'}" value="${nameVal || ''}" oninput="calcWaste()">
+        </td>
+        <td>
+            <input type="number" class="waste-qty-input" value="${qtyVal || ''}" oninput="calcWaste()">
+        </td>
+        <td class="waste-cost-cell">0.00</td>
+        <td><button class="secondary" onclick="deleteWasteRow(this)">حذف</button></td>
+    `;
+    tbl.appendChild(tr);
+}
+
+function deleteWasteRow(btn){
+    const tr = btn.closest('tr');
+    tr.parentNode.removeChild(tr);
+    calcWaste();
+}
+
+function updateWasteList(sel){
+    const tr = sel.closest('tr');
+    const nameInput = tr.querySelector('.waste-name-input');
+    if(sel.value === 'material'){
+        nameInput.setAttribute('list', 'ingList');
+    } else {
+        nameInput.setAttribute('list', 'prodList');
+    }
+    nameInput.value = ''; // مسح الاسم لتجنب أخطاء البحث
+    calcWaste();
+}
+
+function calcWaste(){
+    const tbl = document.getElementById('wasteTbl');
+    if(!tbl) return;
+    const rows = Array.from(tbl.querySelectorAll('tr')).slice(1);
+    
+    // إعادة بناء مصفوفة wasteData
+    wasteData = [];
+    rows.forEach(tr => {
+        const type = tr.querySelector('.waste-type-select').value;
+        const name = (tr.querySelector('.waste-name-input').value || '').trim();
+        const qty = parseFloat(tr.querySelector('.waste-qty-input').value) || 0;
+        
+        if(name && qty > 0){
+            wasteData.push({type, name, qty});
+        }
+    });
+
+    // حساب الاستهلاك النظري للهدر (wasteUsage)
+    wasteUsage = {};
+    let totalWasteCost = 0;
+
+    wasteData.forEach((w, idx) => {
+        const tr = tbl.querySelectorAll('tr')[idx + 1];
+        const costCell = tr.querySelector('.waste-cost-cell');
+        let wasteCost = 0;
+        
+        if(w.type === 'material'){
+            const material = ing.find(i => i.n === w.name);
+            if(material){
+                const {qty: baseQty} = convertToBaseUnit(w.qty, material.baseUnit); // نستخدم وحدة التعريف كوحدة شراء افتراضية
+                wasteCost = baseQty * material.basePrice;
+                
+                if(!wasteUsage[w.name]) wasteUsage[w.name] = {qty: 0, cost: 0, unit: material.baseUnit};
+                wasteUsage[w.name].qty += baseQty;
+                wasteUsage[w.name].cost += wasteCost;
+            }
+        } else if (w.type === 'product'){
+            const prod = productsData[w.name];
+            if(prod){
+                wasteCost = prod.totalCost * w.qty;
+                totalWasteCost += wasteCost;
+                
+                // تحويل المنتج إلى مواد خام مهدرة
+                const prodBlock = Array.from(document.querySelectorAll('.product-block')).find(b => b.querySelector('.prod-name').value.trim() === w.name);
+                if(prodBlock && !prodBlock.classList.contains('bad')){
+                    // هنا نكرر منطق calcSales لتوسيع المنتج إلى مواد خام
+                    const rowsProd = prodBlock.querySelectorAll('table tr');
+                    rowsProd.forEach((trItem, rIdx)=>{
+                        if(rIdx === 0 || trItem.classList.contains('bad')) return;
+                        const typeSel = trItem.querySelector('.typeSelect');
+                        const nameInput = trItem.querySelector('.nameInput');
+                        const qtyInputRow = trItem.querySelector('td:nth-child(3) input');
+
+                        const typeVal = typeSel.value;
+                        const name = (nameInput.value || '').trim();
+                        const qtyPerUnit = parseFloat(qtyInputRow.value || '0') || 0;
+
+                        if(typeVal === 'ing'){
+                            const ingItem = ing.find(i=>i.n === name);
+                            if(ingItem){
+                                if(!wasteUsage[name]) wasteUsage[name] = {qty: 0, cost: 0, unit: ingItem.baseUnit};
+                                const consumedQty = qtyPerUnit * w.qty;
+                                wasteUsage[name].qty += consumedQty;
+                                wasteUsage[name].cost += consumedQty * ingItem.basePrice;
+                            }
+                        } else if(typeVal === 'mix'){
+                            // ... (توسعة الخلطة - نفس منطق calcSales)
+                        }
+                    });
+                }
+            }
+        }
+        
+        costCell.textContent = wasteCost.toFixed(2);
+        totalWasteCost += wasteCost;
+    });
+
+    // عرض ملخص الهدر
+    const sumTbl = document.getElementById('wasteSummary');
+    let header = '<tr><th>اسم المادة</th><th>الكمية المهدرة (وحدة أساسية)</th><th>التكلفة الإجمالية (ريال)</th></tr>';
+    let rowsHtml = '';
+    Object.keys(wasteUsage).sort().forEach(n => {
+        const u = wasteUsage[n];
+        let label = u.unit === 'g' ? 'جرام' : (u.unit === 'ml' ? 'مل' : 'حبة');
+        rowsHtml += `<tr><td>${n}</td><td>${u.qty.toFixed(2)} ${label}</td><td>${u.cost.toFixed(2)}</td></tr>`;
+    });
+    
+    sumTbl.innerHTML = header + rowsHtml;
+    document.getElementById('totalWasteCost').textContent = totalWasteCost.toFixed(2);
+
+    calculateInventoryLevels(); // تحديث مستويات المخزون
+}
+
+/************ دوال صفحة المبيعات (Sales) ************/
+// ... (addSalesRow, deleteSalesRow, clearSalesRows)
+// ... (calcSales - يحتاج تحديث لاستخدام getProductInfo و productsData)
+
+/************ دوال صفحة مستويات المخزون (Inventory Levels) ************/
+function addBBRow(bbDataRow){
+    const tbl = document.getElementById('bbTbl');
+    if(!tbl) return;
+    const tr = document.createElement('tr');
+    const nameVal = bbDataRow ? bbDataRow.name : '';
+    const qtyVal = bbDataRow ? bbDataRow.qty : '';
+    const priceVal = bbDataRow ? bbDataRow.cost : '';
+
+    tr.innerHTML = `
+        <td>
+            <input class="bb-name-input" placeholder="اكتب اسم المادة واخترها" list="bbIngList" value="${nameVal || ''}" oninput="/* لا شيء */">
+        </td>
+        <td>
+            <input type="number" class="bb-qty-input" value="${qtyVal || ''}" oninput="/* لا شيء */">
+        </td>
+        <td>
+            <input type="number" class="bb-price-input" value="${priceVal || ''}" oninput="/* لا شيء */">
+        </td>
+        <td><button class="secondary" onclick="deleteBBRow(this)">حذف</button></td>
+    `;
+    tbl.appendChild(tr);
+}
+function deleteBBRow(btn){
+    const tr = btn.closest('tr');
+    tr.parentNode.removeChild(tr);
+}
+
+function calculateInventoryLevels(){
+    // 1. تجميع رصيد أول المدة (BB)
+    bbData = [];
+    document.querySelectorAll('#bbTbl tr').forEach((tr, idx) => {
+        if(idx === 0) return;
+        const name = (tr.querySelector('.bb-name-input').value || '').trim();
+        const qty = parseFloat(tr.querySelector('.bb-qty-input').value) || 0;
+        const cost = parseFloat(tr.querySelector('.bb-price-input').value) || 0;
+
+        const material = ing.find(i => i.n === name);
+        if(material && qty > 0 && cost >= 0){
+            const {qty: baseQty} = convertToBaseUnit(qty, material.baseUnit); // نفترض أن الوحدة المدخلة هي وحدة تعريف المادة
+            bbData.push({name, qty: baseQty, cost});
+        }
+    });
+
+    // 2. تجميع كميات المشتريات
+    const purchaseTotals = {}; // {name: {qty: totalQty, cost: totalCost}}
+    purchases.forEach(p => {
+        p.items.forEach(item => {
+            const {qty: baseQty} = convertToBaseUnit(item.qty, item.unit);
+            if(!purchaseTotals[item.name]) purchaseTotals[item.name] = {qty: 0, cost: 0};
+            purchaseTotals[item.name].qty += baseQty;
+            purchaseTotals[item.name].cost += item.price;
+        });
+    });
+
+    // 3. تجميع الاستهلاك (مبيعات + هدر)
+    const consumptionTotals = {};
+    const consolidateConsumption = (ledger) => {
+        Object.keys(ledger).forEach(n => {
+            if(!consumptionTotals[n]) consumptionTotals[n] = {qty: 0, cost: 0};
+            consumptionTotals[n].qty += ledger[n].qty;
+            consumptionTotals[n].cost += ledger[n].cost;
+        });
+    };
+    consolidateConsumption(salesUsage);
+    consolidateConsumption(wasteUsage);
+
+    // 4. بناء جدول الرصيد الحالي
+    const currentInvTbl = document.getElementById('currentInvTbl');
+    let header = '<tr><th>المادة</th><th>الوحدة الأساسية</th><th>BB الكمية</th><th>مشتريات الكمية</th><th>استهلاك (مبيعات + هدر)</th><th>الرصيد الحالي (المتوفر نظرياً)</th></tr>';
+    let rowsHtml = '';
+    const allMaterials = new Set([...ing.map(i=>i.n)]);
+
+    allMaterials.forEach(name => {
+        const material = ing.find(i => i.n === name);
+        if (!material) return;
+        
+        const bb = bbData.find(i => i.name === name) || {qty: 0};
+        const purchase = purchaseTotals[name] || {qty: 0};
+        const consumption = consumptionTotals[name] || {qty: 0};
+
+        const currentBalance = bb.qty + purchase.qty - consumption.qty;
+        const unitLabel = material.baseUnit === 'g' ? 'جرام' : (material.baseUnit === 'ml' ? 'مل' : 'حبة');
+
+        rowsHtml += `
+            <tr>
+                <td>${name}</td>
+                <td>${unitLabel}</td>
+                <td>${bb.qty.toFixed(2)}</td>
+                <td>${purchase.qty.toFixed(2)}</td>
+                <td>${consumption.qty.toFixed(2)}</td>
+                <td style="font-weight: bold; color: ${currentBalance < 0 ? '#fca5a5' : '#a7f3d0'};">${currentBalance.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+    currentInvTbl.innerHTML = header + rowsHtml;
+}
+
+
+/************ دوال صفحة الجرد والمقارنة (Variance) ************/
+function addEBRow(ebDataRow){
+    const tbl = document.getElementById('ebTbl');
+    if(!tbl) return;
+    const tr = document.createElement('tr');
+    const nameVal = ebDataRow ? ebDataRow.name : '';
+    const qtyVal = ebDataRow ? ebDataRow.qty : '';
+    const priceVal = ebDataRow ? ebDataRow.cost : '';
+
+    tr.innerHTML = `
+        <td>
+            <input class="eb-name-input" placeholder="اكتب اسم المادة واخترها" list="ebIngList" value="${nameVal || ''}" oninput="/* لا شيء */">
+        </td>
+        <td>
+            <input type="number" class="eb-qty-input" value="${qtyVal || ''}" oninput="/* لا شيء */">
+        </td>
+        <td>
+            <input type="number" class="eb-price-input" value="${priceVal || ''}" oninput="/* لا شيء */">
+        </td>
+        <td><button class="secondary" onclick="deleteEBRow(this)">حذف</button></td>
+    `;
+    tbl.appendChild(tr);
+}
+function deleteEBRow(btn){
+    const tr = btn.closest('tr');
+    tr.parentNode.removeChild(tr);
+}
+
+function calculateVariance(){
+    // يجب تشغيل جميع الدوال الحسابية أولاً
+    recalcPurchases();
+    calcWaste();
+    calcSales();
+    calculateInventoryLevels();
+
+    // 1. تجميع رصيد آخر المدة (EB)
+    ebData = [];
+    document.querySelectorAll('#ebTbl tr').forEach((tr, idx) => {
+        if(idx === 0) return;
+        const name = (tr.querySelector('.eb-name-input').value || '').trim();
+        const qty = parseFloat(tr.querySelector('.eb-qty-input').value) || 0;
+        const cost = parseFloat(tr.querySelector('.eb-price-input').value) || 0;
+
+        const material = ing.find(i => i.n === name);
+        if(material && qty > 0 && cost >= 0){
+            const {qty: baseQty} = convertToBaseUnit(qty, material.baseUnit); 
+            ebData.push({name, qty: baseQty, cost});
+        }
+    });
+
+    const varianceTbl = document.getElementById('varianceTbl');
+    if(!varianceTbl) return;
+
+    let header = '<tr><th>المادة</th><th>الاستخدام النظري</th><th>الاستخدام الفعلي</th><th>الهدر غير المسجل (الكمية)</th><th>تكلفة الهدر غير المسجل (ريال)</th></tr>';
+    let rowsHtml = '';
+    const allMaterials = new Set([...ing.map(i=>i.n)]);
+
+    // تجميع إجمالي المشتريات
+    const purchaseTotals = {};
+    purchases.forEach(p => p.items.forEach(item => {
+        const {qty: baseQty} = convertToBaseUnit(item.qty, item.unit);
+        if(!purchaseTotals[item.name]) purchaseTotals[item.name] = {qty: 0, cost: 0};
+        purchaseTotals[item.name].qty += baseQty;
+        purchaseTotals[item.name].cost += item.price;
+    }));
+
+    allMaterials.forEach(name => {
+        const material = ing.find(i => i.n === name);
+        if (!material) return;
+
+        // الاستخدام النظري = المبيعات + الهدر المسجل
+        const theoreticalUsageQty = (salesUsage[name]?.qty || 0) + (wasteUsage[name]?.qty || 0);
+
+        // الاستخدام الفعلي = (BB + مشتريات) - EB
+        const bbQty = bbData.find(i => i.name === name)?.qty || 0;
+        const purchaseQty = purchaseTotals[name]?.qty || 0;
+        const ebQty = ebData.find(i => i.n === name)?.qty || 0;
+        const actualUsageQty = bbQty + purchaseQty - ebQty;
+
+        // الهدر غير المسجل = الاستخدام الفعلي - الاستخدام النظري
+        const unaccountedVarianceQty = actualUsageQty - theoreticalUsageQty;
+
+        // قيمة الهدر غير المسجل
+        const basePrice = material.basePrice;
+        const unaccountedVarianceCost = unaccountedVarianceQty * basePrice;
+        
+        const className = unaccountedVarianceQty > 0 ? 'variance-td-over' : (unaccountedVarianceQty < 0 ? 'variance-td-short' : '');
+        const unitLabel = material.baseUnit === 'g' ? 'جرام' : (material.baseUnit === 'ml' ? 'مل' : 'حبة');
+
+        rowsHtml += `
+            <tr>
+                <td>${name}</td>
+                <td>${theoreticalUsageQty.toFixed(2)} ${unitLabel}</td>
+                <td>${actualUsageQty.toFixed(2)} ${unitLabel}</td>
+                <td class="${className}">${unaccountedVarianceQty.toFixed(2)} ${unitLabel}</td>
+                <td class="${className}">${unaccountedVarianceCost.toFixed(2)} ريال</td>
+            </tr>
+        `;
+    });
+
+    varianceTbl.innerHTML = header + rowsHtml;
+}
+
+
+/************ تصدير / استيراد البيانات ************/
+function exportData(){
+    // ... (منطق تجميع المنتجات recipes و mixRecipes)
+    // ...
+
+    const data = {
+        ingredients: ing,
+        mixes: mixes, 
+        mixRecipes: mixRecipes,
+        recipes: recipes,
+        purchases: purchasesData,
+        bbData: bbData, // تم تغيير اسم المتغير
+        ebData: ebData, // تم تغيير اسم المتغير
+        wasteData: wasteData // الجديد
+    };
+    
+    // ... (منطق التصدير)
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e){
+    // ... (منطق استيراد البيانات)
+
+    // استيراد تعريف المواد
+    if(Array.isArray(data.ingredients)){
+        ing = data.ingredients;
+        renderDefTbl();
+    }
+
+    // ... (استيراد الخلطات والمنتجات)
+
+    // استيراد المشتريات
+    const purchaseContainer = document.getElementById('purchasesContainer');
+    purchaseContainer.innerHTML = '';
+    if(Array.isArray(data.purchases)){
+        data.purchases.forEach(p => addPurchaseBlock(p));
+    }
+
+    // استيراد رصيد أول المدة (BB)
+    if(Array.isArray(data.bbData)){
+        bbData = data.bbData;
+        const bbTbl = document.getElementById('bbTbl');
+        bbTbl.innerHTML = '<tr><th>اسم المادة (بحث)</th><th>BB الكمية (وحدة الشراء)</th><th>BB السعر الإجمالي</th><th>حذف</th></tr>';
+        bbData.forEach(d => {
+            const material = ing.find(i => i.n === d.name);
+            if(material){
+                // نحول الكمية من وحدة أساسية إلى وحدة تعريف المادة للعرض في الحقل
+                let qtyForInput = d.qty;
+                if(material.baseUnit === 'g') qtyForInput /= 1000;
+                if(material.baseUnit === 'ml') qtyForInput /= 1000;
+                addBBRow({name: d.name, qty: qtyForInput, cost: d.cost});
+            }
+        });
+    }
+
+    // استيراد الهدر (Waste)
+    if(Array.isArray(data.wasteData)){
+        wasteData = data.wasteData;
+        const wasteTbl = document.getElementById('wasteTbl');
+        wasteTbl.innerHTML = '<tr><th>النوع</th><th>الاسم (مادة أو منتج)</th><th>الكمية</th><th>التكلفة التقريبية</th><th>حذف</th></tr>';
+        wasteData.forEach(d => addWasteRow(d));
+    }
+
+    // استيراد رصيد آخر المدة (EB)
+    if(Array.isArray(data.ebData)){
+        ebData = data.ebData;
+        const ebTbl = document.getElementById('ebTbl');
+        ebTbl.innerHTML = '<tr><th>اسم المادة (بحث)</th><th>EB الكمية (وحدة الشراء)</th><th>EB السعر الإجمالي</th><th>حذف</th></tr>';
+        ebData.forEach(d => {
+            const material = ing.find(i => i.n === d.name);
+            if(material){
+                // نحول الكمية من وحدة أساسية إلى وحدة تعريف المادة للعرض في الحقل
+                let qtyForInput = d.qty;
+                if(material.baseUnit === 'g') qtyForInput /= 1000;
+                if(material.baseUnit === 'ml') qtyForInput /= 1000;
+                addEBRow({name: d.name, qty: qtyForInput, cost: d.cost});
+            }
+        });
+    }
+
+    // إعادة الحساب الشامل
+    updateAllLookupsAndUnits();
+    recalcPurchases(); 
+    recalcMixes(); 
+    calcProducts(); 
+    calcWaste(); 
+    calcSales();
+    calculateInventoryLevels();
+});
+
+// تهيئة أولية
+document.addEventListener('DOMContentLoaded', () => {
+    // ... (إضافة بلوك خلطة ومنتج ومشتروات و BB و Waste)
+});
+</script>
+</body>
+</html>
